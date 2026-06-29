@@ -5,6 +5,9 @@
 Escriba el codigo que ejecute la accion solicitada en cada pregunta.
 """
 
+import os
+import zipfile
+import pandas as pd
 
 def pregunta_01():
     """
@@ -71,3 +74,59 @@ def pregunta_01():
 
 
     """
+    
+    # Definimos las rutas principales
+    ruta_zip = "files/input.zip"
+    ruta_extraccion = "files/input"
+    ruta_salida = "files/output"
+
+    # 1. Extraer el archivo .zip si no está extraído todavía
+    if not os.path.exists(ruta_extraccion):
+        with zipfile.ZipFile(ruta_zip, 'r') as zip_ref:
+            zip_ref.extractall("files")
+
+    # Crear la carpeta de salida si no existe
+    if not os.path.exists(ruta_salida):
+        os.makedirs(ruta_salida)
+
+    # 2. Recorrer las carpetas principales (usualmente 'train' y 'test')
+    # Usamos os.listdir para no asumir los nombres y leer lo que haya en la carpeta extraída
+    carpetas_principales = os.listdir(ruta_extraccion)
+
+    for carpeta in carpetas_principales:
+        ruta_carpeta = os.path.join(ruta_extraccion, carpeta)
+        
+        # Saltamos si hay algún archivo suelto que no sea carpeta
+        if not os.path.isdir(ruta_carpeta):
+            continue
+            
+        datos = []
+        
+        # Recorrer las subcarpetas de sentimientos (ej. 'pos', 'neg')
+        for sentimiento in os.listdir(ruta_carpeta):
+            ruta_sentimiento = os.path.join(ruta_carpeta, sentimiento)
+            
+            if os.path.isdir(ruta_sentimiento):
+                
+                # Recorrer los archivos de texto de cada sentimiento
+                for nombre_archivo in os.listdir(ruta_sentimiento):
+                    ruta_archivo = os.path.join(ruta_sentimiento, nombre_archivo)
+                    
+                    # Leer el contenido del archivo
+                    with open(ruta_archivo, 'r', encoding='utf-8') as archivo:
+                        texto = archivo.read()
+                        
+                        # Guardar la frase y su respectivo sentimiento (target)
+                        datos.append({
+                            "phrase": texto,
+                            "target": sentimiento
+                        })
+        
+        # 3. Convertir la lista de datos a un DataFrame de pandas
+        df = pd.DataFrame(datos)
+        
+        # 4. Guardar el DataFrame como archivo CSV
+        nombre_csv = f"{carpeta}_dataset.csv"
+        ruta_csv = os.path.join(ruta_salida, nombre_csv)
+        
+        df.to_csv(ruta_csv, index=False)
